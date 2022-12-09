@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+	<title>RayGotchi</title>
+	<meta content="text/html; charset=UTF-8" http-equiv="content-type">
+	<link rel="icon" type="image/vnd.microsoft.icon" sizes="32x32" href="/favicon.ico">
+	<link rel="stylesheet" href="RayGotchi.css">
+</head>
+
+<body class="body">
+	<p class="heading">Einstellungen<br/>IP:%IP%<br/>COMPILED:%VERSION%</p>
+	<br/>
+	<br/>
+	<br/>
+	<br/>
+	<br/>
+	<br/>
+	<br/>
+	<br/>
+	<form name="settings" method="post" enctype="multipart/form-data" action="#">
+		<table style="text-align: left; width: 650px; height: 77px;">
+			<tbody>
+				<tr>
+					<td style="width: 153px;">RayGotchi Name</td>
+                    <td style="width: 363px;">
+                        <input class="box" name="name" style="width: 400px" id="name" onchange="return saveSettings(this);">
+                    </td>
+				</tr>
+
+				<tr style="width: 153px;">
+					<td>Bluetooth Intervall (sek.)</td>
+					<td>
+						<input class="box" style="width: 42px" type="number" name="interval" 
+							value="30" onchange="return saveSettings(this);">
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</form>
+	<br>
+	<br>
+	<form name="fileinfo" method="post" enctype="multipart/form-data" onsubmit="return uploadFile(this);"
+		action="upload">
+		<table style="text-align: left; width: 650px; height: 77px">
+			<tbody>
+				<tr>
+					<td style="width: 153px;">Datei installieren</td>
+					<td>
+						<input id="inputfile" class="inputfile" name="InputFile" size="50" type="file">
+					</td>
+				</tr>
+				<tr>
+					<td style="width: 153px;"></td>
+					<td>
+						<input id="install" class="button" value="Datei installieren" type="submit">
+					</td>
+				</tr>
+				<tr>
+					<td style="width: 153px;"></td>
+					<td>
+						<progress id="progressBar" value="0" max="0">
+							
+						</progress>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</form>
+	<br>
+	<form>
+		<table style="text-align: left;">
+			<tbody>
+				<tr>
+					<td style="width: 153px;">Status anzeigen</td>
+					<td>
+						<input class="button" type="submit" value="Status" formaction="state">
+					</td>
+					<td>
+						<input class="button" type="submit" value="Logfile" formaction="logfile.log">
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</form>
+	<script>
+
+		function getData() {
+			var xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function () {
+				if (this.readyState == 4 && this.status == 200) {
+					var obj = JSON.parse(this.responseText);
+					
+					if (obj.hasOwnProperty("name")) {
+						document.settings.name.value = obj.name;
+					}
+					if (obj.hasOwnProperty("interval")) {
+						document.settings.interval.value = obj.interval;
+					}
+				};
+			};
+			xhttp.open("GET", "getSettings", true);
+			xhttp.send();
+		}
+
+		document.addEventListener('DOMContentLoaded', getData, false);
+
+		function oReqSuccess() {
+			this.callback.apply(this, this.arguments);
+		}
+
+
+		function oReqError() {
+			console.error(this.statusText);
+		}
+
+
+		function callback() {
+			location.reload();
+		}
+
+		function saveSettings(theForm) {
+			var oData, oReq, oJson = {};
+
+			oData = new FormData(document.settings);
+
+			oReq = new XMLHttpRequest();
+
+			oReq.callback = callback;
+			oReq.onload = oReqSuccess;
+			oReq.onerror = oReqError;
+
+			oReq.open("POST", "/saveSettings", true);
+			oReq.setRequestHeader("Content-type", "application/json");
+			oData.forEach((value, key) => { oJson[key] = value });
+			
+			oJson["name"] = document.settings.name.value;
+			oJson["interval"] = document.settings.interval.value;
+
+			dateobj = new Date();
+			var diff = dateobj.getTimezoneOffset();
+			dateobj.setMinutes(dateobj.getMinutes()+(diff*-1));
+			var dt_f = dateobj.toISOString().substring(0,19);
+			oJson["time"] = dt_f;
+			
+			s = JSON.stringify(oJson);
+			oReq.send(s);
+			return false;
+		}
+		
+	  function setCursor(cursorStyle) {
+		var selectors;
+		if (cursorStyle == "wait") {
+			selectors = "input,body";
+		} else {
+			selectors = "input";
+		}
+		let nodeList = Array.from(document.querySelectorAll(selectors));
+		for (let i = 0; i < nodeList.length; i++) {
+			nodeList[i].style.cursor = cursorStyle;
+		}
+	  }
+	  
+	  function loadStartFunction() {
+		setCursor("wait");
+	  }
+	  
+	  function progressFunction(evt){  
+         var progressBar = document.getElementById("progressBar");
+         if (evt.lengthComputable) {
+           progressBar.max = evt.total;  
+           progressBar.value = evt.loaded;  
+         }  
+	  }
+
+	  function transferCompleteFunction() {
+		setCursor("default");
+		document.getElementById("inputfile").value="";
+		var progressBar = document.getElementById("progressBar");
+		progressBar.removeAttribute("max");
+		progressBar.removeAttribute("value"); 
+        
+	  }
+
+	  function uploadFile(){  
+	    var filesToBeUploaded = document.getElementById("inputfile");  
+        var file = filesToBeUploaded.files[0];;
+        var xhr = new XMLHttpRequest();
+		xhr.onreadystatechange = function () {
+	      if (this.readyState == 4 && this.status == 200) {
+		    //pb.setAttribute("max", "0");
+		    //pb.setAttribute("value", "0");
+		  }
+		}
+		const pb = document.getElementById("progressBar");
+		// 👇️ set `id` attribute on element
+		pb.setAttribute("max", "1000");
+		pb.setAttribute("value", "0");
+		
+        xhr.upload.addEventListener("loadstart", loadStartFunction, false);  
+        xhr.upload.addEventListener("progress", progressFunction, false);  
+        xhr.upload.addEventListener("load", transferCompleteFunction, false);  
+		
+		
+	
+        xhr.open("POST", "/upload", true);  
+        xhr.setRequestHeader("Content-type", file.type);  
+        xhr.setRequestHeader("X_FILE_NAME", file.name);  
+        xhr.send(file);
+      }  
+	  
+	</script>
+</body>
+
+</html>
